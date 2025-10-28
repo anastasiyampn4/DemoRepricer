@@ -1,109 +1,187 @@
-using System;
-using System.Windows.Forms;
-using WildberriesRepricer.Models;
-using WildberriesRepricer.Services;
-using WildberriesRepricer.Data;
+using System.Globalization;
 
-namespace WildberriesRepricer.Forms
+public static class DataManager
 {
-    public partial class RepricingConfigForm : Form
+    // Коллекции для хранения данных в памяти
+    public static List<Product> Products { get; set; } = new List<Product>();
+    public static List<Sale> Sales { get; set; } = new List<Sale>();
+    public static List<Competitor> Competitors { get; set; } = new List<Competitor>();
+
+    // Пути к файлам
+    private static readonly string ProductsFile = "products.csv";
+    private static readonly string SalesFile = "sales.csv";
+    private static readonly string CompetitorsFile = "competitors.csv";
+
+    // === СОХРАНЕНИЕ ДАННЫХ ===
+    public static void SaveAllData()
     {
-        private RepricingConfig _config;
-        private ComboBox _strategyComboBox;
-        private TextBox _undercutPercentTextBox;
-        private TextBox _undercutAmountTextBox;
-        private TextBox _minMarginTextBox;
-        private Button _executeButton;
+        SaveProducts();
+        SaveSales();
+        SaveCompetitors();
+    }
 
-        public RepricingConfigForm()
+    public static void SaveProducts()
+    {
+        try
         {
-            _config = new RepricingConfig();
-            InitializeComponent();
-        }
-
-        private void InitializeComponent()
-        {
-            this.Text = "Настройка Стратегии Репрайсинга";
-            this.Size = new System.Drawing.Size(500, 400);
-            this.StartPosition = FormStartPosition.CenterScreen;
-
-            int yPos = 20;
-
-            var strategyLabel = new Label { Text = "Стратегия:", Left = 20, Top = yPos, Width = 150 };
-            _strategyComboBox = new ComboBox 
-            { 
-                Left = 180, 
-                Top = yPos, 
-                Width = 250,
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            _strategyComboBox.Items.AddRange(new object[] 
-            { 
-                RepricingStrategy.MatchLowest,
-                RepricingStrategy.UndercutByPercent,
-                RepricingStrategy.UndercutByAmount,
-                RepricingStrategy.MaintainMargin,
-                RepricingStrategy.PremiumPricing
-            });
-            _strategyComboBox.SelectedIndex = 0;
-
-            yPos += 40;
-            var undercutPercentLabel = new Label { Text = "Понизить на %:", Left = 20, Top = yPos, Width = 150 };
-            _undercutPercentTextBox = new TextBox { Left = 180, Top = yPos, Width = 100, Text = "5" };
-
-            yPos += 40;
-            var undercutAmountLabel = new Label { Text = "Понизить на руб.:", Left = 20, Top = yPos, Width = 150 };
-            _undercutAmountTextBox = new TextBox { Left = 180, Top = yPos, Width = 100, Text = "50" };
-
-            yPos += 40;
-            var minMarginLabel = new Label { Text = "Мин. маржа %:", Left = 20, Top = yPos, Width = 150 };
-            _minMarginTextBox = new TextBox { Left = 180, Top = yPos, Width = 100, Text = "15" };
-
-            yPos += 60;
-            _executeButton = new Button 
-            { 
-                Text = "Выполнить Репрайсинг", 
-                Left = 150, 
-                Top = yPos, 
-                Width = 200, 
-                Height = 35 
-            };
-            _executeButton.Click += OnExecuteClick;
-
-            this.Controls.Add(strategyLabel);
-            this.Controls.Add(_strategyComboBox);
-            this.Controls.Add(undercutPercentLabel);
-            this.Controls.Add(_undercutPercentTextBox);
-            this.Controls.Add(undercutAmountLabel);
-            this.Controls.Add(_undercutAmountTextBox);
-            this.Controls.Add(minMarginLabel);
-            this.Controls.Add(_minMarginTextBox);
-            this.Controls.Add(_executeButton);
-        }
-
-        private void OnExecuteClick(object sender, EventArgs e)
-        {
-            _config.Strategy = (RepricingStrategy)_strategyComboBox.SelectedItem;
-            _config.UndercutPercent = decimal.Parse(_undercutPercentTextBox.Text);
-            _config.UndercutAmount = decimal.Parse(_undercutAmountTextBox.Text);
-            _config.MinMarginPercent = decimal.Parse(_minMarginTextBox.Text);
-
-            using (var context = new DatabaseContext())
+            using (StreamWriter writer = new StreamWriter(ProductsFile))
             {
-                var repricingService = new RepricingService(context);
-                var results = repricingService.ExecuteBulkRepricing(_config);
-
-                var message = $"Репрайсинг завершен!\n\nОбработано товаров: {results.Count}\n";
-                int changed = 0;
-                foreach (var result in results)
+                // Заголовок CSV
+                writer.WriteLine("Article;Name;CostPrice;Price;Stock;MinPrice;MaxPrice");
+                foreach (var product in Products)
                 {
-                    if (result.PriceChanged) changed++;
+                    // Форматируем с учетом культуры (для корректного десятичного разделителя)
+                    var line = $"{product.Article};{product.Name};{product.CostPrice.ToString(CultureInfo.InvariantCulture)};{product.Price.ToString(CultureInfo.InvariantCulture)};{product.Stock};{product.MinPrice.ToString(CultureInfo.InvariantCulture)};{product.MaxPrice.ToString(CultureInfo.InvariantCulture)}";
+                    writer.WriteLine(line);
                 }
-                message += $"Цены изменены: {changed}\n";
-                message += $"Без изменений: {results.Count - changed}";
-
-                MessageBox.Show(message, "Результаты Репрайсинга", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при сохранении товаров: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    public static void SaveSales()
+    {
+        try
+        {
+            using (StreamWriter writer = new StreamWriter(SalesFile))
+            {
+                writer.WriteLine("SaleId;ProductArticle;SaleDate;Quantity");
+                foreach (var sale in Sales)
+                {
+                    var line = $"{sale.SaleId};{sale.ProductArticle};{sale.SaleDate:yyyy-MM-dd HH:mm:ss};{sale.Quantity}";
+                    writer.WriteLine(line);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при сохранении продаж: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    public static void SaveCompetitors()
+    {
+        try
+        {
+            using (StreamWriter writer = new StreamWriter(CompetitorsFile))
+            {
+                writer.WriteLine("Name;CompetitorArticle;LastPrice");
+                foreach (var comp in Competitors)
+                {
+                    var line = $"{comp.Name};{comp.CompetitorArticle};{comp.LastPrice.ToString(CultureInfo.InvariantCulture)}";
+                    writer.WriteLine(line);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при сохранении данных конкурентов: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // === ЗАГРУЗКА ДАННЫХ ===
+    public static void LoadAllData()
+    {
+        LoadProducts();
+        LoadSales();
+        LoadCompetitors();
+    }
+
+    public static void LoadProducts()
+    {
+        Products.Clear();
+        if (!File.Exists(ProductsFile)) return;
+
+        try
+        {
+            var lines = File.ReadAllLines(ProductsFile);
+            // Пропускаем заголовок
+            foreach (var line in lines.Skip(1))
+            {
+                var parts = line.Split(';');
+                if (parts.Length == 7)
+                {
+                    var product = new Product
+                    {
+                        Article = parts[0],
+                        Name = parts[1],
+                        CostPrice = decimal.Parse(parts[2], CultureInfo.InvariantCulture),
+                        Price = decimal.Parse(parts[3], CultureInfo.InvariantCulture),
+                        Stock = int.Parse(parts[4]),
+                        MinPrice = decimal.Parse(parts[5], CultureInfo.InvariantCulture),
+                        MaxPrice = decimal.Parse(parts[6], CultureInfo.InvariantCulture)
+                    };
+                    Products.Add(product);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при загрузке товаров: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    public static void LoadSales()
+    {
+        Sales.Clear();
+        if (!File.Exists(SalesFile)) return;
+
+        try
+        {
+            var lines = File.ReadAllLines(SalesFile);
+            foreach (var line in lines.Skip(1))
+            {
+                var parts = line.Split(';');
+                if (parts.Length == 4)
+                {
+                    var sale = new Sale
+                    {
+                        SaleId = int.Parse(parts[0]),
+                        ProductArticle = parts[1],
+                        SaleDate = DateTime.ParseExact(parts[2], "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                        Quantity = int.Parse(parts[3])
+                    };
+                    // Обновляем счетчик ID, чтобы новые продажи имели уникальный ID
+                    Sale._idCounter = Math.Max(Sale._idCounter, sale.SaleId + 1);
+                    Sales.Add(sale);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при загрузке продаж: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    public static void LoadCompetitors()
+    {
+        Competitors.Clear();
+        if (!File.Exists(CompetitorsFile)) return;
+
+        try
+        {
+            var lines = File.ReadAllLines(CompetitorsFile);
+            foreach (var line in lines.Skip(1))
+            {
+                var parts = line.Split(';');
+                if (parts.Length == 3)
+                {
+                    var comp = new Competitor
+                    {
+                        Name = parts[0],
+                        CompetitorArticle = parts[1],
+                        LastPrice = decimal.Parse(parts[2], CultureInfo.InvariantCulture)
+                    };
+                    Competitors.Add(comp);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка при загрузке данных конкурентов: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }
