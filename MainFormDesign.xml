@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Form>
+  <Button Name="buttonAddProduct" Text="Добавить товар" Location="10, 10" Size="120, 30" />
+  <Button Name="buttonSimulateSale" Text="Имитировать продажу" Location="140, 10" Size="120, 30" />
+  <Button Name="buttonRunPriceMonitor" Text="Запустить мониторинг" Location="270, 10" Size="120, 30" />
+  <Button Name="buttonShowAnalytics" Text="Аналитика (LINQ)" Location="400, 10" Size="120, 30" />
+
+  <GroupBox Text="Дашборд" Location="10, 50" Size="510, 60">
+      <Label Text="Всего товаров:" Location="10, 25" />
+      <Label Name="labelTotalProducts" Text="0" Location="100, 25" />
+      <Label Text="Всего продаж:" Location="150, 25" />
+      <Label Name="labelTotalSales" Text="0" Location="230, 25" />
+      <Label Text="Нет в наличии:" Location="280, 25" />
+      <Label Name="labelOutOfStock" Text="0" Location="360, 25" />
+      <Label Text="Ср. рентабельность:" Location="410, 25" />
+      <Label Name="labelAvgProfitability" Text="0%" Location="510, 25" />
+  </GroupBox>
+
+  <DataGridView Name="dataGridViewProducts" Location="10, 120" Size="510, 200" />
+
+  <GroupBox Text="Лог мониторинга цен" Location="10, 330" Size="510, 120">
+      <ListBox Name="listBoxLog" Location="10, 20" Size="490, 90" />
+  </GroupBox>
+</Form>
